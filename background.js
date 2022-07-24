@@ -1,21 +1,4 @@
-// async function getCurrentTab() {
-// 	let queryOptions = { active: true, lastFocusedWindow: true };
-// 	// `tab` will either be a `tabs.Tab` instance or `undefined`.
-// 	let [tab] = await chrome.tabs.query(queryOptions);
-// 	return tab;
-// }
-
-// chrome.runtime.onInstalled.addListener(async () => {
-// 	//console.log("tab url");
-// 	console.log(await getCurrentTab());
-// 	// if (typeof window !== "undefined") {
-// 	// 	console.log("You are on the browser");
-// 	// 	// 👉️ can use alert()
-// 	// } else {
-// 	// 	console.log("You are on the server");
-// 	// 	// 👉️ can't use alert()
-// 	// }
-// });
+var twitchChannelNames = [];
 
 // get all twitch tabs
 async function getTwitchTabs() {
@@ -24,59 +7,74 @@ async function getTwitchTabs() {
 	return tabs;
 }
 
-// get twitch names from twitch tabs url
-async function getTwitchNames(tabs) {
+// get unique twitch names from twitch tabs url
+async function getTwitchChannelNames(tabs) {
 	let twitchNames = [];
 	for (let tab of tabs) {
 		let url = new URL(tab.url);
 		let twitchName = url.pathname.split("/")[1];
-		twitchNames.push(twitchName);
+		if (twitchNames.indexOf(twitchName) === -1) {
+			twitchNames.push(twitchName);
+		}
 	}
 	return twitchNames;
 }
 
-// get all twitch tabs and get twitch names from twitch tabs url
-chrome.runtime.onInstalled.addListener(async () => {
-	let twitchTabs = await getTwitchTabs();
-	let twitchNames = await getTwitchNames(twitchTabs);
+// get current twitch names from twitch tabs url
+async function getCurrentTwitchNames() {
+	let tabs = await getTwitchTabs();
+	let twitchNames = await getTwitchChannelNames(tabs);
+	return twitchNames;
+}
 
-	chrome.storage.sync.set({ twitchNames: twitchNames }, () => {
-		console.log("twitch names saved");
-	});
+// get twitch name from twitch tab url
+function getTwitchName(url) {
+	let twitchName = url.pathname.split("/")[1];
+	return twitchName;
+}
 
-	console.log(twitchNames);
+// get twitch name from twitch tab url
+function getTwitchName(url) {
+	let twitchName = url.pathname.split("/")[1];
+	return twitchName;
+}
+
+function isTwitchTab(url) {
+	if (url.hostname === "www.twitch.tv" && url.pathname.split("/")[1] !== "directory") {
+		return true;
+	}
+	return false;
+}
+
+// on tab creation get twitch name and add to twitchChannelNames if it is unique
+// chrome.tabs.onCreated.addListener(async (tab) => {
+// 	if (isTwitchTab(new URL(tab.pendingUrl))) {
+// 		let twitchName = getTwitchName(new URL(tab.pendingUrl));
+// 		if (!twitchChannelNames.includes(twitchName)) {
+// 			twitchChannelNames.push(twitchName);
+// 		}
+// 		console.log("created", twitchChannelNames);
+// 	}
+// });
+
+// on tab removal get twitch name and remove from twitchChannelNames if it is in twitchChannelNames
+// TODO: remove unrelated urls from getting into twitchChannelNames
+chrome.tabs.onRemoved.addListener(async (tabId) => {
+	let tabs = await getTwitchTabs();
+	let twitchNames = await getTwitchChannelNames(tabs);
+	twitchChannelNames = twitchNames;
+	console.log("removed", twitchChannelNames);
 });
 
-// get all twitch tabs and get twitch names from twitch tabs url when tab is updated
-chrome.tabs.onUpdated.addListener(
-	async (tabId, changeInfo, tab) => {
-		if (changeInfo.url) {
-			let url = new URL(tab.url);
-			let twitchName = url.pathname.split("/")[1];
-			chrome.storage.sync.get("twitchNames", ({ twitchNames }) => {
-				if (!twitchNames.includes(twitchName)) {
-					twitchNames.push(twitchName);
-					chrome.storage.sync.set({ twitchNames: twitchNames }, () => {
-						console.log("twitch names saved");
-					});
-				}
-				console.log(twitchNames);
-			});
+// onUpdate completed get twitch names and add to twitchChannelNames if it is unique
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+	if (changeInfo.status === "complete") {
+		if (isTwitchTab(new URL(tab.url))) {
+			let twitchName = getTwitchName(new URL(tab.url));
+			if (!twitchChannelNames.includes(twitchName)) {
+				twitchChannelNames.push(twitchName);
+			}
+			console.log("updated", twitchChannelNames);
 		}
-	} // end of chrome.tabs.onUpdated.addListener
-);
-
-// remove twitch name from twitchNames storage when tab is closed
-chrome.tabs.onRemoved.addListener(
-	async (tabId, removeInfo) => {
-		chrome.storage.sync.get("twitchNames", ({ twitchNames }) => {
-			console.log(removeInfo.url);
-			let twitchName = removeInfo.url.split("/")[1];
-			let twitchNamesNew = twitchNames.filter((name) => name !== twitchName);
-			chrome.storage.sync.set({ twitchNames: twitchNamesNew }, () => {
-				console.log("twitch names deleted");
-			});
-			console.log(twitchNamesNew);
-		});
-	} // end of chrome.tabs.onRemoved.addListener
-);
+	}
+});
