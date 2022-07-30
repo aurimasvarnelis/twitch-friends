@@ -2,7 +2,7 @@ const twitchNames = [];
 
 // get twitchNames: twitchNames from storage
 chrome.storage.sync.get("twitchNames", ({ twitchNames }) => {
-	twitchNames.forEach((twitchName) => {
+	twitchNames.forEach((twitchName: string) => {
 		console.log(twitchName);
 		let twitchNameButton = document.createElement("button");
 		twitchNameButton.innerText = twitchName;

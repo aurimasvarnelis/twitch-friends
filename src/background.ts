@@ -1,4 +1,4 @@
-var twitchTabs = [];
+var twitchTabs: chrome.tabs.Tab[] = [];
 
 async function getTwitchTabs() {
 	let queryOptions = { url: "*://*.twitch.tv/*" };
@@ -6,9 +6,14 @@ async function getTwitchTabs() {
 	return tabs;
 }
 
-function getTwitchName(tab) {
+function getTwitchName(tab: chrome.tabs.Tab) {
 	let url = tab.url;
-	let twitchName = url.split("/")[3];
+	let twitchName : string;
+	if(url){
+		twitchName = url.split("/")[3];
+	} else {
+		twitchName = "unknown";
+	}
 	return twitchName;
 }
 
@@ -21,7 +26,7 @@ async function printTwitchChannelNames() {
 	}
 }
 
-function isTwitchTab(url) {
+function isTwitchTab(url: URL) {
 	if (url.hostname === "www.twitch.tv" && url.pathname.split("/")[1] !== "directory") {
 		return true;
 	}
@@ -33,7 +38,7 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
 	// find tab by tabId in twitchTabs
 	let tab = twitchTabs.find((tab) => tab.id === tabId);
 	if (tab) {
-		if (isTwitchTab(new URL(tab.url))) {
+		if (isTwitchTab(new URL(tab.url!))) {
 			if (twitchTabs.includes(tab)) {
 				twitchTabs.splice(twitchTabs.indexOf(tab), 1);
 			}
@@ -45,7 +50,7 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
 // onUpdate completed get twitch tabs and add to twitchTabs
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 	if (changeInfo.status === "complete") {
-		if (isTwitchTab(new URL(tab.url))) {
+		if (isTwitchTab(new URL(tab.url!))) {
 			// check if tab.url is equal to any of the urls in twitchTabs.url
 			// if not, add to twitchTabs
 			if (!twitchTabs.some((twitchTab) => twitchTab.url === tab.url)) {
